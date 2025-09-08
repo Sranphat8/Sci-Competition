@@ -1,37 +1,35 @@
 import Activity from "../models/activity.model.js";
-import { Op } from "sequelize";
 
 const activityController = {};
-
-// Create activity
+// Create a new activity
 activityController.createActivity = async (req, res) => {
   try {
     const {
       name,
       description,
-      date,
       type,
       level,
-      location,
       team_size,
+      date,
+      location,
+      reg_open,
+      reg_close,
       contact_name,
       contact_phone,
       contact_email,
-      req_open,
-      req_close,
       status,
     } = req.body;
-
+    // Validate required fields
     if (
       !name ||
       !description ||
-      !date ||
       !type ||
       !level ||
-      !location ||
       !team_size ||
-      !req_open ||
-      !req_close ||
+      !date ||
+      !location ||
+      !reg_open ||
+      !reg_close ||
       !contact_name ||
       !contact_phone ||
       !contact_email
@@ -40,34 +38,32 @@ activityController.createActivity = async (req, res) => {
         .status(400)
         .json({ error: "Please provide all required fields" });
     }
+    // Check for duplicate activity name
+    await Activity.findOne({ where: { name } }).then((activity) => {
+      if (activity) {
+        res.status(400).send({ message: "Activity name is already existed" });
+        return;
+      }
+    });
 
-    const existingActivity = await Activity.findOne({ where: { name } });
-    if (existingActivity) {
-      return res
-        .status(400)
-        .json({ message: "Activity name is already existed" });
-    }
-
+    // Create the activity
     const newActivity = await Activity.create({
       name,
       description,
-      date,
       type,
       level,
-      location,
       team_size,
-      req_open,
-      req_close,
+      date,
+      location,
+      reg_open,
+      reg_close,
       contact_name,
       contact_phone,
       contact_email,
       status,
     });
 
-    res.status(201).json({
-      message: "Activity created successfully",
-      activity: newActivity,
-    });
+    res.status(201).json(newActivity);
   } catch (error) {
     console.error("Error creating activity:", error);
     res
@@ -88,7 +84,6 @@ activityController.getAllActivities = async (req, res) => {
       .json({ message: "Something went wrong while fetching activities" });
   }
 };
-
 // Get activity by ID
 activityController.getActivityById = async (req, res) => {
   try {
@@ -105,75 +100,90 @@ activityController.getActivityById = async (req, res) => {
     });
   }
 };
-
 // Update activity by ID
-activityController.updateActivityById = async (req, res) => {
+activityController.updateActivity = async (req, res) => {
   try {
     const { id } = req.params;
+    // Validate ID
+    if (!id) {
+      return res.status(400).json({ message: "Activity ID is required" });
+    }
+    // Check if activity exists
+    const activity = await Activity.findByPk(id);
+    if (!activity) {
+      return res.status(404).json({ message: "Activity not found" });
+    }
+
+    // Extract fields from request body
     const {
       name,
       description,
-      date,
       type,
       level,
-      location,
       team_size,
+      date,
+      location,
+      reg_open,
+      reg_close,
       contact_name,
       contact_phone,
       contact_email,
-      req_open,
-      req_close,
       status,
     } = req.body;
-
+    // Validate required fields
     if (
       !name ||
       !description ||
-      !date ||
       !type ||
       !level ||
-      !location ||
       !team_size ||
-      !req_open ||
-      !req_close ||
+      !date ||
+      !location ||
+      !reg_open ||
+      !reg_close ||
       !contact_name ||
       !contact_phone ||
       !contact_email
     ) {
       return res
         .status(400)
-        .json({ error: "Please provide all required fields" });
+        .json({ message: "Please provide all required fields" });
     }
-
-    const existingActivity = await Activity.findOne({ where: { name } });
-    if (existingActivity && existingActivity.id !== parseInt(id)) {
-      return res
-        .status(400)
-        .json({ message: "Activity name is already existed" });
-    }
-
-    const activity = await Activity.findByPk(id);
-    if (!activity) {
-      return res.status(404).json({ message: "Activity not found" });
-    }
-
-    await activity.update({
-      name,
-      description,
-      date,
-      type,
-      level,
-      location,
-      team_size,
-      contact_name,
-      contact_phone,
-      contact_email,
-      req_open,
-      req_close,
-      status,
+    // Check for duplicate activity name
+    await Activity.findOne({ where: { name } }).then((activity) => {
+      if (activity && activity.id !== parseInt(id)) {
+        res.status(400).send({ message: "Activity name is already existed" });
+        return;
+      }
     });
 
-    res.status(200).json({ message: "Activity updated successfully", activity });
+    // Update the activity
+    await activity
+      .update({
+        name,
+        description,
+        type,
+        level,
+        team_size,
+        date,
+        location,
+        reg_open,
+        reg_close,
+        contact_name,
+        contact_phone,
+        contact_email,
+        status,
+      })
+      .then((num) => {
+        if (num[0] === 1) {
+          console.log("Activity was updated successfully.");
+          res.status(200).json(activity);
+        } else {
+          console.log(
+            `Cannot update Activity with id=${id}. Maybe Activity was not found or req.body is empty!`
+          );
+        }
+      });
   } catch (error) {
     console.error("Error updating activity:", error);
     res
@@ -181,23 +191,21 @@ activityController.updateActivityById = async (req, res) => {
       .json({ message: "Something went wrong while updating the activity" });
   }
 };
-
 // Delete activity by ID
-activityController.deleteActivityById = async (req, res) => {
+activityController.deleteActivity = async (req, res) => {
   try {
     const { id } = req.params;
-
+    // Validate ID
     if (!id) {
-      return res.status(400).json({ message: "Invalid activity ID" });
+      return res.status(400).json({ error: "Activity ID is required" });
     }
-
+    // Check if activity exists
     const activity = await Activity.findByPk(id);
     if (!activity) {
-      return res.status(404).json({ message: "Activity not found" });
+      return res.status(404).json({ error: "Activity not found" });
     }
-
     await activity.destroy();
-    res.status(200).json({ message: "Activity deleted successfully" });
+    res.status(204).send();
   } catch (error) {
     console.error("Error deleting activity:", error);
     res
@@ -206,14 +214,12 @@ activityController.deleteActivityById = async (req, res) => {
   }
 };
 
-// Search activities by filters
-activityController.searchActivitiesByName = async (req, res) => {
+activityController.searchActivities = async (req, res) => {
   try {
     const { name, type, level, status } = req.query;
     const whereClause = {};
-
     if (name) {
-      whereClause.name = { [Op.like]: `%${name}%` };
+      whereClause.name = { [Op.iLike]: `%${name}%` }; // Case-insensitive search
     }
     if (type) {
       whereClause.type = type;
@@ -224,7 +230,6 @@ activityController.searchActivitiesByName = async (req, res) => {
     if (status) {
       whereClause.status = status;
     }
-
     const activities = await Activity.findAll({ where: whereClause });
     res.status(200).json(activities);
   } catch (error) {

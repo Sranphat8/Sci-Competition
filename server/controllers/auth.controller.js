@@ -1,118 +1,100 @@
-import db from "../models/index.js";
-const User = db.User;
-const Role = db.Role;
-import config from "../config/auth.config.js";
-import bcrypt from "bcryptjs"; //เข้ารหัส
+// redo
 import jwt from "jsonwebtoken";
-//import operator
-import { Op } from "sequelize";
-const authController = {};
+import authConfig from "../config/auth.config.js";
+import db from "../models/index.js";
+import sha256 from 'crypto-js/sha256';
+const User = db.User;
 
-authController.signUp = async (req, res) => {
-  const { username, name, email, password } = req.body;
-  if (!username || !name || !email || !password) {
-    res.status(400).send({ message: "Please provide all required fields" });
-    return;
-  }
-  // SELECT * FROM User WHERE username = username
-  await User.findOne({ where: { username } })
-    // .select("-password")
-    .then((user) => {
-      if (user) {
-        res.status(400).send({ message: "Username is already existed" });
-        return;
-      }
+//Register
+const SignUp = async (req, res) => {
+  const { email, password, type, name, school, phone } = req.body;
+  try {
+    //Validate request
+    if (!email || !password || !type || !name) {
+      return res
+        .status(400).send({ message: "Email, password, type and name are required !" });
+    }
 
-      const newUser = {
-        username,
-        name,
-        email,
-        password: bcrypt.hashSync(password, 8),
-      };
-      User.create(newUser)
-        .then((user) => {
-          //send roles in request body [ADMIN]
-          if (req.body.roles) {
-            //SELECT * FROM Role WHERE name=role1 OR name=role2
-            Role.findAll({
-              where: {
-                name: { [Op.or]: req.body.roles },
-              },
-            }).then((roles) => {
-              //array. length คือจำนวนที่อยู่ใน roles
-              if (roles?.length === 0) {
-                user.setRoles([3]).then(() => {
-                  res.send({ message: "User registered successfully3" });
-                });
-              } else {
-                //มีค่า
-                user.setRoles(roles).then(() => {
-                  res.send({ message: "User registered successfully1" });
-                });
-              }
-            });
-          } else {
-            user.setRoles([1]).then(() => {
-              res.send({ message: "User registered successfully2" });
-            });
-          }
-        })
-        .catch((error) => {
-          res.status(500).send({
-            message:
-              error.message || "Something error while registering a new user",
-          });
+    //Validate user type
+    const allowedTypes = ["admin", "teacher", "judge"];
+    if (!allowedTypes.includes(type)) {
+      return res.status(400).send({
+        message: "Invalid user type. Must be one of: admin, teacher or judge",
+      });
+    }
+
+    if (type === "teacher" && (!school || !phone)) {
+      return res.status(400).send({
+        message: "school and phone are required for teacher!",
+      });
+    }
+
+    //Check if user already exists
+    const existingUser = await User.findOne({
+      where: { 
+        email: email,
+       },
+    });
+    if(existingUser){
+      return res.status(400).send({ message: "Email already in use!" })
+    }
+
+    //Create user object base on type
+    const userData = { 
+      name: name,
+      email: email, 
+      password: password, 
+      type: type,
+    };
+    if (type === "teacher") {
+      userData.school = school;
+      userData.phone = phone;
+    }
+
+    //Create new user
+    const user = await User.create(userData);
+
+    // res.status(201)
+    // .send({ message: "User registered successfully!", userId: user.id });
+
+    //If user is a teacher, create and send verification email
+    if (type === "teacher") {
+      try {
+        //create verification token
+        const token = crypto.randomBytes(32).toString("hex");
+        const verificationToken = await db.VerificationToken.create({
+          token,
+          userId: user.id,
+          expiredAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
         });
-    });
-};
-
-authController.signIn = async (req, res) => {
-  const { username, password } = req.body;
-  if (!username || !password) {
-    res.status(400).send({
-      message: "Username or password are missing",
-    });
-    return;
-  }
-  await User.findOne({
-    where: { username: username },
-  })
-    .then((user) => {
-      if (!user) {
-        res.status(404).send({ message: "User not found!" });
-        return;
-      }
-      const passwordIsValid = bcrypt.compareSync(password, user.password);
-      if (!passwordIsValid) {
-        res.status(401).send({ message: "Invalid password" });
-      }
-      //Valid User
-      const token = jwt.sign({ username: user.username }, config.secret, {
-        expiresIn: 60 * 60 * 24, //60sec * 60min *24h = 86400
-      });
-      const authorities = [];
-      user.getRoles().then((roles) => {
-        for (let i = 0; i < roles.length; i++) {
-          console.log("name", roles[i].name.toUpperCase());
-          //ROLES_USER list
-          authorities.push("ROLES_" + roles[i].name.toUpperCase());
-        }
-        res.send({
-          token: token,
-          authorities: authorities,
-          userInfo: {
-            name: user.name,
-            email: user.email,
-            username: user.username,
-          },
+      } catch (error) {
+        return res.status(500).send({
+          message: error.message || "Some error occurred while creating the Verification Token."
         });
-      });
-    })
-    .catch((error) => {
-      res.status(500).send({
-        message: error.message || "Something error while signign In",
-      });
-    });
-};
+      }
+    }
 
-export default authController;
+    res.status(201).send({ 
+      message: 
+        user.type === "teacher"
+
+          ? "Registration successful! Please check your  email to verify your account."
+    
+          : "User registered successfully!", 
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        type: user.type,
+        ...school(user.type === "teacher" && { isVerified: user.isVerified }),
+      },
+    });
+
+  } catch (error) {
+    return res
+    .status(500)
+    .send({
+      message: error.message || "Some error occurred while creating the User."
+    });
+  }
+};
