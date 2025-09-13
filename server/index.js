@@ -46,7 +46,7 @@ app.get("/", (req, res) => {
 });
 
 // use routers
-// app.use("/api/v1/activities", ActivityRouter);
+app.use("/api/v1/activities", ActivityRouter);
 app.use("/api/v1/auth", authRouter);
 
 app.listen(PORT, () => {

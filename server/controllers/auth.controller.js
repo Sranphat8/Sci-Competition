@@ -2,7 +2,7 @@
 import jwt from "jsonwebtoken";
 import authConfig from "../config/auth.config.js";
 import db from "../models/index.js";
-import sha256 from 'crypto-js/sha256';
+import crypto from "crypto";
 const User = db.User;
 
 //Register
@@ -12,7 +12,8 @@ const SignUp = async (req, res) => {
     //Validate request
     if (!email || !password || !type || !name) {
       return res
-        .status(400).send({ message: "Email, password, type and name are required !" });
+        .status(400)
+        .send({ message: "Email, password, type and name are required !" });
     }
 
     //Validate user type
@@ -22,11 +23,11 @@ const SignUp = async (req, res) => {
         message: "Invalid user type. Must be one of: admin, teacher or judge",
       });
     }
-
+   //Addition validation for teacher
     if (type === "teacher" && (!school || !phone)) {
-      return res.status(400).send({
-        message: "school and phone are required for teacher!",
-      });
+      return res
+      .status(400)
+      .send({ message: "school and phone are required for teacher!" });
     }
 
     //Check if user already exists
@@ -36,7 +37,8 @@ const SignUp = async (req, res) => {
        },
     });
     if(existingUser){
-      return res.status(400).send({ message: "Email already in use!" })
+      return res.status(400)
+      .send({ message: "Email already in use!" })
     }
 
     //Create user object base on type
@@ -67,12 +69,10 @@ const SignUp = async (req, res) => {
           userId: user.id,
           expiredAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
         });
-      } catch (error) {
-        return res.status(500).send({
-          message: error.message || "Some error occurred while creating the Verification Token."
-        });
+        //Send verification email
+      } catch (error) {}
       }
-    }
+  
 
     res.status(201).send({ 
       message: 
@@ -86,7 +86,7 @@ const SignUp = async (req, res) => {
         name: user.name,
         email: user.email,
         type: user.type,
-        ...school(user.type === "teacher" && { isVerified: user.isVerified }),
+        ...(user.type === "teacher" && { isVerified: user.isVerified }),
       },
     });
 

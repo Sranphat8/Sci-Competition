@@ -1,5 +1,5 @@
 import sequelize from "./db.js";
-import sequelize from "sequelize"
+import Sequelize from "sequelize"
 
 import User from "./user.model.js";
 import Activity from "./activity.model.js";
@@ -9,18 +9,18 @@ import Admin from "./admin.model.js";
 import VerificationToken from "./verificationToken.model.js";
 
 const db = {};
-db.Sequelize = sequelize;
 db.sequelize = sequelize;
+db.Sequelize = Sequelize;
 
 db.User = User;
 db.Activity = Activity;
+db.Admin = Admin;
 db.Teacher = Teacher;
 db.Judge = Judge;
-db.Admin = Admin;
 db.VerificationToken = VerificationToken;
 
 //Association
-db.VerificationToken.belongsTo(db.User, { foreignKey: "userId"});
-db.User.belongsTo(db.VerificationToken, { foreignKey: "userId"});
+db.VerificationToken.belongTo(db.User, { foreigKey: "userId" });
+db.User.belongTo(db.VerificationToken, { foreigKey: "userId" });
 
 export default db;
