@@ -1,5 +1,5 @@
-import { DataTypes } from "sequelize";
 import User from "./user.model.js";
+import db from "./index.js";
 
 const Teacher = User.init({
     school: {
@@ -21,7 +21,7 @@ const Teacher = User.init({
         },
     },
     {
-        hook: {
+        hooks: {
             beforeCreate: (teacher) => {
                 teacher.type = "teacher";
             },

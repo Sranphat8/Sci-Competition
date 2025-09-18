@@ -1,8 +1,10 @@
+import sequelize from "./db.js";
 import User from "./user.model.js";
 
 const Admin = User.init(
   {},
   {
+    sequelize,
     scopes: {
       defaultScope: {
         where: {
@@ -12,7 +14,7 @@ const Admin = User.init(
     },
   },
   {
-    hook: {
+    hooks: {
       beforeCreate: (admin) => {
         admin.type = "admin";
       },

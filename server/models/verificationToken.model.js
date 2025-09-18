@@ -6,6 +6,7 @@ const VerificationToken = sequelize.define("verificationToken", {
     type: DataTypes.INTEGER,
     allowNull: false,
     primaryKey: true,
+    autoIncrement: true,
   },
   token: {
     type: DataTypes.STRING,
@@ -20,7 +21,7 @@ const VerificationToken = sequelize.define("verificationToken", {
       key: "id",
     },
   },
-  expiresAt: {
+  expiredAt: {
     type: DataTypes.DATE,
     allowNull: false,
   },

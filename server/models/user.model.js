@@ -9,6 +9,7 @@ const User = sequelize.define(
             type: DataTypes.INTEGER,
             allowNull: false,
             primaryKey: true,
+            autoIncrement: true,
         },
         name: {
             type: DataTypes.STRING,
@@ -29,6 +30,11 @@ const User = sequelize.define(
         type: {
             type: DataTypes.STRING,
             allowNull: false,
+        },
+        // Teacher
+        school: {
+            type: DataTypes.STRING,
+            allowNull: true,
         },
         isVerified: {
             type: DataTypes.BOOLEAN,

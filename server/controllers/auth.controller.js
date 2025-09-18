@@ -2,11 +2,14 @@
 import jwt from "jsonwebtoken";
 import authConfig from "../config/auth.config.js";
 import db from "../models/index.js";
-import crypto from "crypto";
+import crypto, { sign } from "crypto";
 const User = db.User;
+import { sendVerificationEmail } from "../utils/email.js";
+import path from "path";
+const VerificationToken = db.VerificationToken;
 
 //Register
-const SignUp = async (req, res) => {
+const signUp = async (req, res) => {
   const { email, password, type, name, school, phone } = req.body;
   try {
     //Validate request
@@ -23,29 +26,29 @@ const SignUp = async (req, res) => {
         message: "Invalid user type. Must be one of: admin, teacher or judge",
       });
     }
-   //Addition validation for teacher
+    //Addition validation for teacher
     if (type === "teacher" && (!school || !phone)) {
       return res
-      .status(400)
-      .send({ message: "school and phone are required for teacher!" });
+        .status(400)
+        .send({ message: "school and phone are required for teacher!" });
     }
 
     //Check if user already exists
     const existingUser = await User.findOne({
-      where: { 
+      where: {
         email: email,
-       },
+      },
     });
-    if(existingUser){
+    if (existingUser) {
       return res.status(400)
-      .send({ message: "Email already in use!" })
+        .send({ message: "Email already in use!" })
     }
 
     //Create user object base on type
-    const userData = { 
+    const userData = {
       name: name,
-      email: email, 
-      password: password, 
+      email: email,
+      password: password,
       type: type,
     };
     if (type === "teacher") {
@@ -69,18 +72,26 @@ const SignUp = async (req, res) => {
           userId: user.id,
           expiredAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
         });
-        //Send verification email
-      } catch (error) {}
-      }
-  
+        console.log("Verification token created:", verificationToken);
 
-    res.status(201).send({ 
-      message: 
+        //TODO Send verification email
+        await sendVerificationEmail(user.email, token, user.name);
+        console.log("Verification email email sent successfully!");
+
+        //Send verification email
+      } catch (error) {
+        console.error("Error sending verification email", error);
+      }
+    }
+
+
+    res.status(201).send({
+      message:
         user.type === "teacher"
 
           ? "Registration successful! Please check your  email to verify your account."
-    
-          : "User registered successfully!", 
+
+          : "User registered successfully!",
       user: {
         id: user.id,
         name: user.name,
@@ -92,9 +103,62 @@ const SignUp = async (req, res) => {
 
   } catch (error) {
     return res
-    .status(500)
-    .send({
-      message: error.message || "Some error occurred while creating the User."
+      .status(500)
+      .send({
+        message: error.message || "Some error occurred while creating the User."
+      });
+  }
+};
+
+const verifyEmail = async (req, res) => {
+  const {token} = req.params;
+  if(!token){
+    returnres.status(400)
+    .send({message: "Token is missing!"});
+  }
+
+  try {
+    const verificationToken = await db.VerificationToken.findOne({
+      // token: token สามารถลดรูปใช้แบบนี้ได้ { token }
+      where: { token },
+    });
+    if(!verificationToken){
+      return res.status(404)
+      .send({message: "Invalid verification token!"});
+    }
+    //Check if token is expired
+    // เอาวันหมดอายุมาเช็คกับวันปัจจุบัน
+    if(new Date() > verificationToken.expiredAt){
+      await verificationToken.destroy();
+      return res.status(400)
+      .send({message: "Verification token has expired!"});
+    }
+    const user = await User.findByPk(verificationToken.userId);
+    if (!user) {
+      return res.status(404)
+      .send({message: "User not found!"});
+    }
+    await user.update({isVerified: true});
+    // Delete the used token
+    await verificationToken.destroy();
+    // return web view
+    const htmlPath = path.join(process.cwd(), 
+    "views", 
+    "verificationSuccess.html"
+  );
+  res.sendFile(htmlPath);
+
+  } catch (error) {
+    res.status(500)
+    .send({message: error.message || "Some error occurred while verifying the user."
+
     });
   }
 };
+
+const authController = {
+  signUp,
+  verifyEmail
+};
+
+export default authController;

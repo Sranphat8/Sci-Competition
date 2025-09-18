@@ -3,6 +3,7 @@ import User from "./user.model.js";
 const Judge = User.init(
   {},
   {
+
     scopes: {
       defaultScope: {
         where: {
@@ -12,7 +13,7 @@ const Judge = User.init(
     },
   },
   {
-    hook: {
+    hooks: {
       beforeCreate: (judge) => {
         judge.type = "judge";
       },
