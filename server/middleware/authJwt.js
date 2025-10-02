@@ -6,66 +6,73 @@ const User = db.User;
 const verifyToken = (req, res, next) => {
   let token = req.headers["x-access-token"];
   if (!token) {
-    return res
-    .status(403)
-    .send({ message: "No Token Provided!" });
+    return res.status(403).send({ message: "No Token Provided!" });
   }
+
   jwt.verify(token, authConfig.secret, (err, decoded) => {
     if (err) {
-      return res
-      .status(401)
-      .send({ message: "Unauthorized!" });
+      return res.status(401).send({ message: "Unauthorized!" });
     }
-    req.username = decoded.username;
+    req.userId = decoded.id;
     next();
   });
 };
 
 const isAdmin = (req, res, next) => {
-  User.findByPk(req.username).then((user) => {
-    user.getRoles().then((roles) => {
-      for (let i = 0; i < roles.length; i++) {
-        if (roles[i].name === "admin") {
-          next();
-          return;
-        }
+  try {
+    User.findByPk(req.userId).then((user) => {
+      if (!user) {
+        return res.status(404).send({ message: "User not found!" });
+      }
+      if (user.type === "admin") {
+        next();
+        return;
       }
       return res
         .status(401)
         .send({ message: "Unauthorized access, require admin role!" });
     });
-  });
-};
-const isModOrAdmin = (req, res, next) => {
-  User.findByPk(req.username).then((user) => {
-    user.getRoles().then((roles) => {
-      for (let i = 0; i < roles.length; i++) {
-        if (roles[i].name === "admin" || roles[i].name === "moderator") {
-          next();
-          return;
-        }
-      }
-      return res
-        .status(401)
-        .send({ message: "Unauthorized access, require admin role!" });
-    });
-  });
-};
-const isManager = (req, res, next) => {
-  User.findByPk(req.username).then((user) => {
-    user.getRoles().then((roles) => {
-      for (let i = 0; i < roles.length; i++) {
-        if (roles[i].name === "manager") {
-          next();
-          return;
-        }
-      }
-      return res
-        .status(401)
-        .send({ message: "Unauthorized access, require manager role!" });
-    });
-  });
+  } catch (error) {
+    return res.status(500).send({ message: error.message });
+  }
 };
 
-const authJwt = { verifyToken, isAdmin, isModOrAdmin, isManager };
+const isTeacher = (req, res, next) => {
+  try {
+    User.findByPk(req.userId).then((user) => {
+      if (!user) {
+        return res.status(404).send({ message: "User not found!" });
+      }
+      if (user.type === "teacher") {
+        next();
+        return;
+      }
+      return res
+        .status(401)
+        .send({ message: "Unauthorized access, require teacher role!" });
+    });
+  } catch (error) {
+    return res.status(500).send({ message: error.message });
+  }
+};
+
+const isJudge = (req, res, next) => {
+  try {
+    User.findByPk(req.userId).then((user) => {
+      if (!user) {
+        return res.status(404).send({ message: "User not found!" });
+      }
+      if (user.type === "judge") {
+        next();
+        return;
+      }
+      return res
+        .status(401)
+        .send({ message: "Unauthorized access, require judge role!" });
+    });
+  } catch (error) {
+    return res.status(500).send({ message: error.message });
+  }
+};
+const authJwt = { verifyToken, isAdmin, isTeacher, isJudge };
 export default authJwt;

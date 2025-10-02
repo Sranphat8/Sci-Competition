@@ -3,7 +3,6 @@ import User from "./user.model.js";
 const Judge = User.init(
   {},
   {
-
     scopes: {
       defaultScope: {
         where: {

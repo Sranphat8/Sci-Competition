@@ -1,5 +1,4 @@
 import Activity from "../models/activity.model.js";
-
 const activityController = {};
 // Create a new activity
 activityController.createActivity = async (req, res) => {
@@ -104,6 +103,8 @@ activityController.getActivityById = async (req, res) => {
 activityController.updateActivity = async (req, res) => {
   try {
     const { id } = req.params;
+    console.log(id, req.body);
+
     // Validate ID
     if (!id) {
       return res.status(400).json({ message: "Activity ID is required" });
@@ -175,13 +176,20 @@ activityController.updateActivity = async (req, res) => {
         status,
       })
       .then((num) => {
-        if (num[0] === 1) {
-          console.log("Activity was updated successfully.");
-          res.status(200).json(activity);
+        console.log("num", num);
+
+        if (num) {
+          // console.log("Activity was updated successfully.");
+          res
+            .status(200)
+            .send({ message: "Activity was updated successfully." });
         } else {
-          console.log(
-            `Cannot update Activity with id=${id}. Maybe Activity was not found or req.body is empty!`
-          );
+          // console.log(
+          //   `Cannot update Activity with id=${id}. Maybe Activity was not found or req.body is empty!`
+          // );
+          res.status(404).send({
+            message: `Cannot update Activity with id=${id}. Maybe Activity was not found or req.body is empty!`,
+          });
         }
       });
   } catch (error) {
@@ -205,7 +213,7 @@ activityController.deleteActivity = async (req, res) => {
       return res.status(404).json({ error: "Activity not found" });
     }
     await activity.destroy();
-    res.status(204).send();
+    res.status(204).json({ message: "Delete activity Successfully" });
   } catch (error) {
     console.error("Error deleting activity:", error);
     res

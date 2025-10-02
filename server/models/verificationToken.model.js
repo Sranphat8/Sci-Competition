@@ -4,7 +4,6 @@ import sequelize from "./db.js";
 const VerificationToken = sequelize.define("verificationToken", {
   id: {
     type: DataTypes.INTEGER,
-    allowNull: false,
     primaryKey: true,
     autoIncrement: true,
   },

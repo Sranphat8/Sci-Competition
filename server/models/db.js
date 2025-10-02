@@ -1,6 +1,6 @@
 import { Sequelize } from "sequelize";
 import dbConfig from "../config/db.config.js";
-console.log(dbConfig);
+// console.log(dbConfig);
 const sequelize = new Sequelize(dbConfig.DB, dbConfig.USER, dbConfig.PASSWORD, {
   host: dbConfig.HOST,
   port: dbConfig.PORT,
@@ -8,8 +8,8 @@ const sequelize = new Sequelize(dbConfig.DB, dbConfig.USER, dbConfig.PASSWORD, {
   logging: false,
   omitNull: true,
   // dialectOptions: {
-  //   ssl:{
-  //     require: true,
+  //   ssl: {
+  //     required: true,
   //     rejectUnauthorized: false,
   //   },
   // },

@@ -6,7 +6,7 @@ import AuthMiddleware from "../middleware/authJwt.js";
 // Create a new activity
 router.post(
   "/",
-  [AuthMiddleware.verifyToken, AuthMiddleware.isManager],
+  [AuthMiddleware.verifyToken, AuthMiddleware.isAdmin],
   activityController.createActivity
 );
 
@@ -19,14 +19,14 @@ router.get("/:id", activityController.getActivityById);
 // Update activity by ID
 router.put(
   "/:id",
-  [AuthMiddleware.verifyToken, AuthMiddleware.isManager],
+  [AuthMiddleware.verifyToken, AuthMiddleware.isAdmin],
   activityController.updateActivity
 );
 
 // Delete activity by ID
 router.delete(
   "/:id",
-  [AuthMiddleware.verifyToken, AuthMiddleware.isManager],
+  [AuthMiddleware.verifyToken, AuthMiddleware.isAdmin],
   activityController.deleteActivity
 );
 
